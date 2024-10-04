@@ -1,17 +1,35 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using WebApplication1.DataConnector;
 
 namespace WebApplication1.Controllers
 {
 	public class ProductController : Controller
 	{
-		QuanLySanPhamContext context;
+		[BindProperty]
+        public int? CatalogId { get; set; }
+
+
+        [BindProperty]
+        public string? ProductCode { get; set; }
+
+        [BindProperty]
+        public string? ProductName { get; set; }
+
+        [BindProperty]
+        public string? Picture { get; set; }
+
+        [BindProperty]
+        public double? UnitPrice { get; set; }
+
+        QuanLySanPhamContext context;
         public ProductController()
         {
             
 			context = new QuanLySanPhamContext();
         }
+
         // GET: ProductController
         public ActionResult Index()
 		{
@@ -51,17 +69,34 @@ namespace WebApplication1.Controllers
 		// GET: ProductController/Edit/5
 		public ActionResult Edit(int id)
 		{
-			return View();
-		}
+            var product = context.Products.Find(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
 
-		// POST: ProductController/Edit/5
-		[HttpPost]
+            // Lấy danh sách các catalog từ database và truyền vào ViewBag
+            //ViewBag.CatalogId = new SelectList(context.Catalogs, "Id", "Name", product.CatalogId);
+
+            return View(product);
+        }
+
+        // POST: ProductController/Edit/5
+        [HttpPost]
 		[ValidateAntiForgeryToken]
 		public ActionResult Edit(int id, IFormCollection collection)
 		{
 			try
 			{
-				return RedirectToAction(nameof(Index));
+                var p = context.Products.Find(id);
+                p.UnitPrice = UnitPrice;
+                p.Picture = Picture;
+                p.ProductName = ProductName;
+                p.ProductCode = ProductCode;
+                p.CatalogId = CatalogId;
+                context.Update(p);
+                context.SaveChanges();
+                return RedirectToAction(nameof(Index));
 			}
 			catch
 			{
