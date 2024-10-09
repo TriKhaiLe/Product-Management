@@ -57,5 +57,44 @@ namespace WebApplication1.Controllers
             }
         }
 
+        public ActionResult Create()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(Catalog cat)
+        {
+            try
+            {
+                var c = new Catalog();
+                c.CatalogCode = cat.CatalogCode;
+                c.CatalogName = cat.CatalogName;
+                context.Add(c);
+                context.SaveChanges();
+                return RedirectToAction(nameof(Index));
+            }
+            catch
+            {
+                return View();
+            }
+        }
+
+        public ActionResult Delete(int id)
+        {
+            try
+            {
+                var c = context.Catalogs.Find(id);
+                context.Catalogs.Remove(c);
+                context.SaveChanges();
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                return View(ex.Message);
+            }
+        }
+
     }
 }
