@@ -68,6 +68,12 @@ namespace WebApplication1.Controllers
         {
             try
             {
+                var existedCatalog = context.Catalogs.FirstOrDefault(c => c.CatalogCode == cat.CatalogCode);
+                if (existedCatalog != null)
+                {
+                    ModelState.AddModelError("CatalogCode", "CatalogCode already exists.");
+                    return View(cat);
+                }
                 var c = new Catalog();
                 c.CatalogCode = cat.CatalogCode;
                 c.CatalogName = cat.CatalogName;
