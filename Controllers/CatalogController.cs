@@ -32,28 +32,39 @@ namespace WebApplication1.Controllers
                 return NotFound();
             }
 
-            // Lấy danh sách các catalog từ database và truyền vào ViewBag
-            //ViewBag.CatalogId = new SelectList(context.Catalogs, "Id", "Name", product.CatalogId);
-
             return View(c);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(Catalog catalog)
+        public ActionResult Edit(Catalog inputCatalog)
         {
             try
             {
-                var c = context.Catalogs.Find(catalog.Id);
-                c.CatalogCode = catalog.CatalogCode;
-                c.CatalogName = catalog.CatalogName;
+                var c = context.Catalogs.Find(inputCatalog.Id);
+                if (c == null)
+                    return NotFound();
+
+                var existedCatalog = context.Catalogs
+                    .FirstOrDefault(x => x.CatalogCode == inputCatalog.CatalogCode && x.Id != inputCatalog.Id);
+
+                if (existedCatalog != null)
+                {
+                    ModelState.AddModelError("CatalogCode", "CatalogCode already exists.");
+                    return View(inputCatalog);
+                }
+
+                // Cập nhật catalog
+                c.CatalogCode = inputCatalog.CatalogCode;
+                c.CatalogName = inputCatalog.CatalogName;
                 context.Update(c);
                 context.SaveChanges();
+
                 return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return View();
+                return View(inputCatalog);
             }
         }
 
@@ -92,13 +103,29 @@ namespace WebApplication1.Controllers
             try
             {
                 var c = context.Catalogs.Find(id);
+                if (c == null)
+                {
+                    TempData["ErrorMessage"] = "Catalog not found.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var relatedProducts = context.Products.Where(p => p.CatalogId == id).ToList();
+                if (relatedProducts.Any())
+                {
+                    TempData["ErrorMessage"] = "This catalog is referenced by existing products and cannot be deleted.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 context.Catalogs.Remove(c);
                 context.SaveChanges();
+
+                TempData["SuccessMessage"] = "Catalog deleted successfully.";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                return View(ex.Message);
+                TempData["ErrorMessage"] = "An error occurred while deleting the catalog: " + ex.Message;
+                return RedirectToAction(nameof(Index));
             }
         }
 
