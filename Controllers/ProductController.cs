@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using WebApplication1.DataConnector;
+using WebApplication1.DTOs;
 
 namespace WebApplication1.Controllers
 {
@@ -55,35 +56,43 @@ namespace WebApplication1.Controllers
         // POST: ProductController/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection form)
+        public ActionResult Create(CreateNewProductDto inputProduct)
         {
             try
             {
-                // Lấy CatalogCode từ form
-                string catalogCode = form["CatalogCode"];
-
-                // Tra cứu CatalogId dựa trên CatalogCode
-                var catalog = context.Catalogs.FirstOrDefault(c => c.CatalogCode == catalogCode);
-
-                if (catalog == null)
+                if (inputProduct == null)
                 {
-                    // Nếu không tìm thấy Catalog với mã CatalogCode, trả về lỗi
-                    ModelState.AddModelError("CatalogCode", "Catalog code không tồn tại.");
-                    return View();
+                    ModelState.AddModelError("", "Invalid product data.");
+                    return View(inputProduct);
                 }
 
-                // Tạo sản phẩm mới với CatalogId đã tìm thấy
+                var existedProduct = context.Products.FirstOrDefault(x => x.ProductCode == inputProduct.ProductCode);
+                if (existedProduct != null)
+                {
+                    ModelState.AddModelError("ProductCode", "ProductCode already exists.");
+                    return View(inputProduct);
+                }
+
+                // Kiểm tra xem Catalog có tồn tại không dựa vào CatalogCode
+                var catalog = context.Catalogs.FirstOrDefault(c => c.CatalogCode == inputProduct.CatalogCode);
+                if (catalog == null)
+                {
+                    ModelState.AddModelError("", $"Catalog with code {inputProduct.CatalogCode} not found.");
+                    return View(inputProduct);
+                }
+
+                // Tạo một sản phẩm mới từ DTO
                 var product = new Product
                 {
-                    UnitPrice = Convert.ToDouble(form["UnitPrice"]),
-                    Picture = form["Picture"],
-                    ProductName = form["ProductName"],
-                    ProductCode = form["ProductCode"],
-                    CatalogId = catalog.Id // Gán CatalogId sau khi tra cứu
+                    CatalogId = catalog.Id,  // Liên kết với Catalog
+                    ProductCode = inputProduct.ProductCode,
+                    ProductName = inputProduct.ProductName,
+                    Picture = inputProduct.Picture,
+                    UnitPrice = inputProduct.UnitPrice
                 };
 
-                // Thêm sản phẩm vào database
-                context.Add(product);
+                // Thêm sản phẩm mới vào database
+                context.Products.Add(product);
                 context.SaveChanges();
                 return RedirectToAction(nameof(Index));
             }

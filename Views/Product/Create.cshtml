@@ -1,4 +1,4 @@
-﻿@model WebApplication1.DataConnector.Product
+﻿@model WebApplication1.DTOs.CreateNewProductDto
 
 @{
     ViewData["Title"] = "Create";
@@ -7,6 +7,24 @@
 <h1>Create</h1>
 
 <h4>Product</h4>
+
+@* Hiển thị thông báo lỗi hoặc thành công dưới dạng alert *@
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <hr />
 <div class="row">
     <div class="col-md-4">
