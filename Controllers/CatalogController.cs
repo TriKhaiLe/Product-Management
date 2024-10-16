@@ -1,131 +1,121 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using WebApplication1.DataConnector;
+using WebApplication1.DTOs;
 
 namespace WebApplication1.Controllers
 {
-	public class CatalogController : Controller
-	{
-        QuanLySanPhamContext context;
-        public CatalogController()
+    [ApiController]
+    [Route("api/[controller]")]
+    public class CatalogController : ControllerBase
+    {
+        QuanLySanPhamContext _context;
+        private readonly IMapper _mapper;
+        public CatalogController(IMapper mapper)
         {
-			context = new QuanLySanPhamContext();
-
+			_context = new QuanLySanPhamContext();
+            _mapper = mapper;
         }
-        public IActionResult Index()
+
+        [HttpGet]
+        public IActionResult GetCatalogs()
 		{
-			List<Catalog> dsCatalog = context.Catalogs.ToList();
-			return View(dsCatalog);
+			List<Catalog> dsCatalog = [.. _context.Catalogs];
+			return Ok(dsCatalog);
 		}
 
-        public ActionResult Details(int id)
+        [HttpGet("{id}")]
+        public ActionResult GetCatalogById(int id)
         {
-            var ctl = context.Catalogs.Find(id);
-
-            return View(ctl);
-        }
-
-        public ActionResult Edit(int id)
-        {
-            var c = context.Catalogs.Find(id);
-            if (c == null)
-            {
+            var ctl = _context.Catalogs.Find(id);
+            if (ctl == null)
                 return NotFound();
-            }
 
-            return View(c);
+            return Ok(ctl);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Edit(Catalog inputCatalog)
+        [HttpPut]
+        public ActionResult Edit(UpdateCatalogDto inputCatalog)
         {
             try
             {
-                var c = context.Catalogs.Find(inputCatalog.Id);
+                var c = _context.Catalogs.Find(inputCatalog.Id);
                 if (c == null)
                     return NotFound();
 
-                var existedCatalog = context.Catalogs
+                var existedCatalog = _context.Catalogs
                     .FirstOrDefault(x => x.CatalogCode == inputCatalog.CatalogCode && x.Id != inputCatalog.Id);
 
                 if (existedCatalog != null)
                 {
-                    ModelState.AddModelError("CatalogCode", "CatalogCode already exists.");
-                    return View(inputCatalog);
+                    return BadRequest("This catalog code is existed");
                 }
 
                 // Cập nhật catalog
                 c.CatalogCode = inputCatalog.CatalogCode;
                 c.CatalogName = inputCatalog.CatalogName;
-                context.Update(c);
-                context.SaveChanges();
+                _context.Update(c);
+                _context.SaveChanges();
 
-                return RedirectToAction(nameof(Index));
+                return Ok(c);
             }
-            catch
+            catch (Exception ex)
             {
-                return View(inputCatalog);
+                return StatusCode(500, "Internal server error: " + ex.Message); // 500 Internal Server Error
             }
-        }
-
-        public ActionResult Create()
-        {
-            return View();
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Create(Catalog cat)
+        public ActionResult AddCatalog(CreateCatalogDto cat)
         {
             try
             {
-                var existedCatalog = context.Catalogs.FirstOrDefault(c => c.CatalogCode == cat.CatalogCode);
+                if (cat == null)
+                    return BadRequest("Info can't be empty");
+
+                var existedCatalog = _context.Catalogs.FirstOrDefault(c => c.CatalogCode == cat.CatalogCode);
                 if (existedCatalog != null)
                 {
-                    ModelState.AddModelError("CatalogCode", "CatalogCode already exists.");
-                    return View(cat);
+                    return BadRequest("This catalog code is already existed");
                 }
                 var c = new Catalog();
                 c.CatalogCode = cat.CatalogCode;
                 c.CatalogName = cat.CatalogName;
-                context.Add(c);
-                context.SaveChanges();
-                return RedirectToAction(nameof(Index));
+                _context.Add(c);
+                _context.SaveChanges();
+                return Ok(c);
             }
-            catch
+            catch (Exception ex)
             {
-                return View();
+                return StatusCode(500, "Internal server error: " + ex.Message); // 500 Internal Server Error
             }
         }
 
+        [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
             try
             {
-                var c = context.Catalogs.Find(id);
+                var c = _context.Catalogs.Find(id);
                 if (c == null)
                 {
-                    TempData["ErrorMessage"] = "Catalog not found.";
-                    return RedirectToAction(nameof(Index));
+                    return NotFound("Catalog not found");
                 }
 
-                var relatedProducts = context.Products.Where(p => p.CatalogId == id).ToList();
-                if (relatedProducts.Any())
+                var relatedProducts = _context.Products.Where(p => p.CatalogId == id).ToList();
+                if (relatedProducts.Count != 0)
                 {
-                    TempData["ErrorMessage"] = "This catalog is referenced by existing products and cannot be deleted.";
-                    return RedirectToAction(nameof(Index));
+                    return BadRequest("This catalog is referenced by existing products and cannot be deleted");
                 }
 
-                context.Catalogs.Remove(c);
-                context.SaveChanges();
+                _context.Catalogs.Remove(c);
+                _context.SaveChanges();
 
-                TempData["SuccessMessage"] = "Catalog deleted successfully.";
-                return RedirectToAction(nameof(Index));
+                return Ok("Catalog deleted successfully");
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = "An error occurred while deleting the catalog: " + ex.Message;
-                return RedirectToAction(nameof(Index));
+                return StatusCode(500, "Internal server error: " + ex.Message); // 500 Internal Server Error
             }
         }
 

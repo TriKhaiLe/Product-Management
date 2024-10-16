@@ -1,4 +1,4 @@
-namespace WebApplication1
+﻿namespace WebApplication1
 {
 	public class Program
 	{
@@ -8,8 +8,11 @@ namespace WebApplication1
 
 			// Add services to the container.
 			builder.Services.AddControllersWithViews();
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+            builder.Services.AddAutoMapper(typeof(Program));
 
-			var app = builder.Build();
+            var app = builder.Build();
 
 			// Configure the HTTP request pipeline.
 			if (!app.Environment.IsDevelopment())
@@ -18,11 +21,23 @@ namespace WebApplication1
 				// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
 				app.UseHsts();
 			}
+            else
+            {
+                app.UseDeveloperExceptionPage();
+                // Sử dụng Swagger trong môi trường phát triển
+                app.UseSwagger();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+                    c.RoutePrefix = string.Empty;  // Hiển thị Swagger ở trang root
+                });
+            }
 
 			app.UseHttpsRedirection();
 			app.UseStaticFiles();
 
-			app.UseRouting();
+
+            app.UseRouting();
 
 			app.UseAuthorization();
 
