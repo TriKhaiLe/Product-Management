@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WebApplication1.DataConnector;
 using WebApplication1.DTOs;
@@ -34,6 +35,7 @@ namespace WebApplication1.Controllers
             return Ok(ctl);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut]
         public ActionResult Edit(UpdateCatalogDto inputCatalog)
         {
@@ -65,6 +67,7 @@ namespace WebApplication1.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public ActionResult AddCatalog(CreateCatalogDto cat)
         {
@@ -91,6 +94,7 @@ namespace WebApplication1.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {

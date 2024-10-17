@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -39,6 +40,7 @@ namespace WebApplication1.Controllers
             return Ok(product);
 		}
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public ActionResult Create(CreateNewProductDto inputProduct)
         {
@@ -82,7 +84,7 @@ namespace WebApplication1.Controllers
             }
         }
 
-        // POST: ProductController/Edit/5
+        [Authorize(Roles = "Admin")]
         [HttpPut]
 		public ActionResult Edit(UpdateProductDto inputProduct)
 		{
@@ -124,6 +126,7 @@ namespace WebApplication1.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public ActionResult Delete(int id)
 		{

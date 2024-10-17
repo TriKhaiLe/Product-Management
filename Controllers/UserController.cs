@@ -37,7 +37,9 @@ namespace WebApplication1.Controllers
             user.Password = password;
             _context.Users.Add(user);
             _context.SaveChanges();
-            var token = GenerateToken(user);
+
+            string role = username == "admin" ? "Admin" : "User";
+            var token = GenerateToken(user, role);
             return Ok(new APIRespond() { UserId = user.id, AccessToken = token });
         }
         [HttpPost("Login")]
@@ -48,11 +50,12 @@ namespace WebApplication1.Controllers
             {
                 return BadRequest("Wrong username or password");
             }
-            var token = GenerateToken(user);
+            string role = username == "admin" ? "Admin" : "User";
+            var token = GenerateToken(user, role);
             return Ok(new APIRespond() { UserId = user.id, AccessToken = token });
         }
 
-        private string GenerateToken(User user)
+        private string GenerateToken(User user, string role)
         {
             // phát sinh token và trả về cho người dùng sau khi đăng nhập thành công
             var jwtTokenHandler = new JwtSecurityTokenHandler();
@@ -68,6 +71,7 @@ namespace WebApplication1.Controllers
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     new Claim("UserID", user.id.ToString()),
                     // role
+                    new Claim(ClaimTypes.Role, role)
                 }),
                 // thời gian sống của token
                 Expires = DateTime.UtcNow.AddHours(1),
