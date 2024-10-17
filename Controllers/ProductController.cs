@@ -15,10 +15,10 @@ namespace WebApplication1.Controllers
         QuanLySanPhamContext _context;
         private readonly IMapper _mapper;
 
-        public ProductController(IMapper mapper)
+        public ProductController(IMapper mapper, QuanLySanPhamContext context)
         {
-            
-			_context = new QuanLySanPhamContext();
+
+            _context = context;
             _mapper = mapper;
         }
 
