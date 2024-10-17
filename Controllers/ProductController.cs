@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -7,79 +8,55 @@ using WebApplication1.DTOs;
 
 namespace WebApplication1.Controllers
 {
-	public class ProductController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ProductController : ControllerBase
 	{
-		[BindProperty]
-        public int? CatalogId { get; set; }
+        QuanLySanPhamContext _context;
+        private readonly IMapper _mapper;
 
-
-        [BindProperty]
-        public string? ProductCode { get; set; }
-
-        [BindProperty]
-        public string? ProductName { get; set; }
-
-        [BindProperty]
-        public string? Picture { get; set; }
-
-        [BindProperty]
-        public double? UnitPrice { get; set; }
-
-        QuanLySanPhamContext context;
-        public ProductController()
+        public ProductController(IMapper mapper)
         {
             
-			context = new QuanLySanPhamContext();
+			_context = new QuanLySanPhamContext();
+            _mapper = mapper;
         }
 
-        // GET: ProductController
-        public ActionResult Index()
+        [HttpGet]
+        public IActionResult GetProducts()
 		{
-			List<Product> dsSp = context.Products.Include(p => p.Catalog).ToList();
-			return View(dsSp);
+			List<Product> dsSp = [.. _context.Products];
+			return Ok(dsSp);
 		}
 
-		// GET: ProductController/Details/5
-		public ActionResult Details(int id)
+        [HttpGet("{id}")]
+        public ActionResult GetProductById(int id)
 		{
-            var product = context.Products.Find(id);
+            var product = _context.Products.Find(id);
+            if (product == null)
+                return NotFound();
 
-            return View(product);
+            return Ok(product);
 		}
 
-		// GET: ProductController/Create
-		public ActionResult Create()
-		{
-			return View();
-		}
-
-        // POST: ProductController/Create
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public ActionResult Create(CreateNewProductDto inputProduct)
         {
             try
             {
                 if (inputProduct == null)
-                {
-                    ModelState.AddModelError("", "Invalid product data.");
-                    return View(inputProduct);
-                }
+                    return BadRequest("Info can't be empty");
 
-                var existedProduct = context.Products.FirstOrDefault(x => x.ProductCode == inputProduct.ProductCode);
+                var existedProduct = _context.Products.FirstOrDefault(x => x.ProductCode == inputProduct.ProductCode);
                 if (existedProduct != null)
                 {
-                    ModelState.AddModelError("ProductCode", "ProductCode already exists.");
-                    return View(inputProduct);
+                    return BadRequest("This product code is already existed");
                 }
 
                 // Kiểm tra xem Catalog có tồn tại không dựa vào CatalogCode
-                var catalog = context.Catalogs.FirstOrDefault(c => c.CatalogCode == inputProduct.CatalogCode);
+                var catalog = _context.Catalogs.FirstOrDefault(c => c.CatalogCode == inputProduct.CatalogCode);
                 if (catalog == null)
-                {
-                    ModelState.AddModelError("", $"Catalog with code {inputProduct.CatalogCode} not found.");
-                    return View(inputProduct);
-                }
+                    return NotFound($"Catalog with code {inputProduct.CatalogCode} not found.");
 
                 // Tạo một sản phẩm mới từ DTO
                 var product = new Product
@@ -92,84 +69,79 @@ namespace WebApplication1.Controllers
                 };
 
                 // Thêm sản phẩm mới vào database
-                context.Products.Add(product);
-                context.SaveChanges();
-                return RedirectToAction(nameof(Index));
-            }
-            catch
-            {
-                return View();
-            }
-        }
+                _context.Products.Add(product);
+                _context.SaveChanges();
 
-        // GET: ProductController/Edit/5
-        public ActionResult Edit(int id)
-		{
-            var product = context.Products.Find(id);
-            if (product == null)
-            {
-                return NotFound();
-            }
-
-            // Lấy danh sách các catalog từ database và truyền vào ViewBag
-            //ViewBag.CatalogId = new SelectList(context.Catalogs, "Id", "Name", product.CatalogId);
-
-            return View(product);
-        }
-
-        // POST: ProductController/Edit/5
-        [HttpPost]
-		[ValidateAntiForgeryToken]
-		public ActionResult Edit(int id, IFormCollection collection)
-		{
-			try
-			{
-                var p = context.Products.Find(id);
-                p.UnitPrice = UnitPrice;
-                p.Picture = Picture;
-                p.ProductName = ProductName;
-                p.ProductCode = ProductCode;
-                p.CatalogId = CatalogId;
-                context.Update(p);
-                context.SaveChanges();
-                return RedirectToAction(nameof(Index));
-			}
-			catch
-			{
-				return View();
-			}
-		}
-
-		// GET: ProductController/Delete/5
-		public ActionResult Delete(int id)
-		{
-            try
-            {
-                var p = context.Products.Find(id);
-                context.Products.Remove(p);
-                context.SaveChanges();
-                return RedirectToAction(nameof(Index));
+                UpdateProductDto returnObject = _mapper.Map<UpdateProductDto>(product);
+                returnObject.CatalogCode = inputProduct.CatalogCode;
+                return Ok(returnObject);
             }
             catch (Exception ex)
             {
-                return View(ex.Message);
+                return StatusCode(500, "Internal server error: " + ex.Message); // 500 Internal Server Error
             }
         }
 
-        // POST: ProductController/Delete/5
-        [HttpPost]
-		[ValidateAntiForgeryToken]
-		public ActionResult Delete(int id, IFormCollection collection)
+        // POST: ProductController/Edit/5
+        [HttpPut]
+		public ActionResult Edit(UpdateProductDto inputProduct)
 		{
 			try
 			{
-                context.Products.Remove(context.Products.Find(id));
-				return RedirectToAction(nameof(Index));
-			}
-			catch (Exception ex)
-			{
-				return View(ex.Message);
-			}
-		}
+                var p = _context.Products.Find(inputProduct.Id);
+                if (p == null)
+                    return NotFound();
+
+                var catalog = _context.Catalogs
+                    .FirstOrDefault(x => x.CatalogCode == inputProduct.CatalogCode);
+                if (catalog == null)
+                    return NotFound($"Catalog with code {inputProduct.CatalogCode} not found.");
+
+                var existedProduct = _context.Products
+                    .FirstOrDefault(x => x.ProductCode == inputProduct.ProductCode && x.Id != inputProduct.Id);
+                if (existedProduct != null)
+                {
+                    return BadRequest("This product code is already existed");
+                }
+
+                //p.CatalogId = catalog.Id;
+                //p.UnitPrice = inputProduct.UnitPrice;
+                //p.Picture = inputProduct.Picture;
+                //p.ProductName = inputProduct.ProductName;
+                //p.ProductCode = inputProduct.ProductCode;
+
+                _mapper.Map(inputProduct, p);
+                p.CatalogId = catalog.Id;
+
+                _context.Update(p);
+                _context.SaveChanges();
+
+                return Ok(inputProduct);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error: " + ex.Message); // 500 Internal Server Error
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public ActionResult Delete(int id)
+		{
+            try
+            {
+                var p = _context.Products.Find(id);
+                if (p == null) return NotFound("Product not found");
+
+
+                _context.Products.Remove(p);
+                _context.SaveChanges();
+
+                return Ok("Product deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error: " + ex.Message); // 500 Internal Server Error
+            }
+        }
 	}
 }
